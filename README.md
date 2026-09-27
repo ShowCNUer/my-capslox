@@ -14,7 +14,29 @@
 - 绑定成功、失败、启动等待等不抢焦点的几秒提示弹窗。
 - 托盘菜单、重载和 `user_bindings.ahk` 扩展入口。
 
-## 可执行版与开始菜单
+## 从 GitHub Release 直接使用
+
+如果不需要修改快捷键或重新编译，可以直接从 [GitHub Releases](https://github.com/ShowCNUer/my-capslox/releases) 下载最新版本。Release 中通常包含：
+
+- `MyCapslox.exe`：独立的 Windows 64 位可执行文件。
+- `MyCapslox.sha256`：用于校验下载文件完整性。
+
+下载 `MyCapslox.exe` 后可以直接双击启动，不需要另外安装 AutoHotkey，也不需要管理员权限。建议把它复制到一个不会随意删除的目录，例如 `C:\Users\<用户名>\Apps\MyCapslox\`。
+
+下载后可以使用 PowerShell 校验 SHA-256：
+
+```powershell
+Get-FileHash .\MyCapslox.exe -Algorithm SHA256
+Get-Content .\MyCapslox.sha256
+```
+
+确认第一个命令输出的哈希值与 `.sha256` 文件中的值一致后再运行。首次启动前请先退出原版 Capslox；两套程序不能同时运行，否则可能争抢同一组键盘钩子。
+
+当前 Release 没有 Authenticode 数字签名，Windows SmartScreen 或安全软件可能显示“未知发布者”提示。确认文件来自本项目的 GitHub Release 并完成哈希校验后，再按系统提示选择运行。
+
+直接运行 Release 版本时，窗口槽位数据仍保存到 `%LOCALAPPDATA%\MyCapslox\data\window-slots.ini`。更新时退出正在运行的 My Capslox，下载新的 `MyCapslox.exe` 覆盖旧文件即可；绑定数据不会因此删除。Release 版本默认不会自动启动，如需开机启动，可以手动为 exe 创建快捷方式并放入当前用户的 Windows“启动”文件夹。
+
+## 可执行版与开始菜单（从源码构建）
 
 构建独立的 64 位 `MyCapslox.exe`：
 
