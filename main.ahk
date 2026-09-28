@@ -22,6 +22,7 @@ if A_Args.Length && A_Args[1] = "--self-test"
 global MyCapsloxInstanceMutex := AcquireInstanceMutex()
 
 SendMode("Input")
+SetStoreCapsLockMode(false)
 SetWorkingDir(A_ScriptDir)
 SetTitleMatchMode(2)
 WindowUtils.EnablePerMonitorDpi()
@@ -34,6 +35,7 @@ SetupTray()
 
 global CapsLayerUsed := false
 global CapsLayerInput := 0
+global CapsLayerBaseState := false
 
 if ProcessExist("Capslox.exe") {
     if A_IsCompiled {
@@ -46,22 +48,38 @@ if ProcessExist("Capslox.exe") {
 
 ; Caps Lock is a hold modifier. A short standalone press toggles the real Caps Lock state.
 *CapsLock::{
-    global CapsLayerUsed, CapsLayerInput
+    global CapsLayerUsed, CapsLayerInput, CapsLayerBaseState
     CapsLayerUsed := false
-    CapsLayerInput := InputHook("V")
-    CapsLayerInput.KeyOpt("{All}", "N")
-    CapsLayerInput.OnKeyDown := CapsLayerKeyDown
-    CapsLayerInput.Start()
-    KeyWait("CapsLock")
-    CapsLayerInput.Stop()
-    CapsLayerInput := 0
-    if !CapsLayerUsed && A_PriorKey = "CapsLock" {
-        nextState := GetKeyState("CapsLock", "T") ? "Off" : "On"
-        SetCapsLockState(nextState)
+
+    ; Keep the real toggle state neutral while Caps Lock acts as a modifier.
+    CapsLayerBaseState := GetKeyState("CapsLock", "T")
+    SetCapsLockState("Off")
+
+    try {
+        CapsLayerInput := InputHook("V")
+        CapsLayerInput.KeyOpt("{All}", "N")
+        CapsLayerInput.OnKeyDown := CapsLayerKeyDown
+        CapsLayerInput.Start()
+        KeyWait("CapsLock")
+    } finally {
+        if IsObject(CapsLayerInput) {
+            try CapsLayerInput.Stop()
+            CapsLayerInput := 0
+        }
+
+        if CapsLayerUsed
+            SetCapsLockState(CapsLayerBaseState ? "On" : "Off")
+        else
+            SetCapsLockState(CapsLayerBaseState ? "Off" : "On")
     }
 }
 
 #HotIf GetKeyState("CapsLock", "P")
+
+; Caps layer uses Alt for many shortcuts. Keep Alt visible to this script's
+; hotkey matching, but hide its events from browsers and other applications.
+*LAlt::return
+*RAlt::return
 
 ; Navigation.
 Space::CapsSend("{Enter}")
