@@ -15,6 +15,7 @@
 #Include lib\WindowSlots.ahk
 #Include lib\WindowMover.ahk
 #Include lib\ClipboardSlots.ahk
+#Include lib\KeyBindings.ahk
 
 if A_Args.Length && A_Args[1] = "--self-test"
     ExitApp(RunCompiledSelfTest())
@@ -36,6 +37,8 @@ SetupTray()
 global CapsLayerUsed := false
 global CapsLayerInput := 0
 global CapsLayerBaseState := false
+
+RegisterCapsHotkeys()
 
 if ProcessExist("Capslox.exe") {
     if A_IsCompiled {
@@ -73,119 +76,6 @@ if ProcessExist("Capslox.exe") {
             SetCapsLockState(CapsLayerBaseState ? "Off" : "On")
     }
 }
-
-#HotIf GetKeyState("CapsLock", "P")
-
-; Caps layer uses Alt for many shortcuts. Keep Alt visible to this script's
-; hotkey matching, but hide its events from browsers and other applications.
-*LAlt::return
-*RAlt::return
-
-; Navigation.
-Space::CapsSend("{Enter}")
-e::CapsSend("{Up}")
-d::CapsSend("{Down}")
-s::CapsSend("{Left}")
-f::CapsSend("{Right}")
-!e::CapsSend("{Up 5}")
-!d::CapsSend("{Down 5}")
-!s::CapsSend("{Left 5}")
-!f::CapsSend("{Right 5}")
-t::CapsSend("{Up 20}")
-z::CapsSend("{Down 20}")
-!t::CapsSend("{Up 50}")
-!z::CapsSend("{Down 50}")
-a::CapsSend("^{Left}")
-g::CapsSend("^{Right}")
-!a::CapsSend("^{Left 5}")
-!g::CapsSend("^{Right 5}")
-p::CapsSend("{Home}")
-SC027::CapsSend("{End}") ; semicolon
-!p::CapsSend("^{Home}")
-!SC027::CapsSend("^{End}")
-
-; Selection.
-i::CapsSend("+{Up}")
-k::CapsSend("+{Down}")
-j::CapsSend("+{Left}")
-l::CapsSend("+{Right}")
-!i::CapsSend("+{Up 5}")
-!k::CapsSend("+{Down 5}")
-!j::CapsSend("+{Left 5}")
-!l::CapsSend("+{Right 5}")
-m::CapsSend("+{Up 20}")
-SC033::CapsSend("+{Down 20}") ; comma
-!m::CapsSend("+{Up 50}")
-!SC033::CapsSend("+{Down 50}")
-h::CapsSend("^+{Left}")
-SC034::CapsSend("^+{Right}") ; period
-!h::CapsSend("^+{Left 5}")
-!SC034::CapsSend("^+{Right 5}")
-n::CapsSendSequence("^{Left}", "^+{Right}")
-!n::CapsSendSequence("{Home}", "+{End}")
-u::CapsSend("+{Home}")
-o::CapsSend("+{End}")
-!u::CapsSend("^+{Home}")
-!o::CapsSend("^+{End}")
-
-; Deletion and insertion.
-w::CapsSend("{Backspace}")
-r::CapsSend("{Delete}")
-!w::CapsSend("^{Backspace}")
-!r::CapsSend("^{Delete}")
-SC01A::CapsSendSequence("+{Home}", "{Backspace}") ; left bracket
-SC035::CapsSendSequence("+{End}", "{Delete}") ; slash
-!SC01A::CapsSendSequence("^+{Home}", "{Backspace}")
-!SC035::CapsSendSequence("^+{End}", "{Delete}")
-Backspace::CapsSendSequence("{End}", "+{Home}", "{Backspace}")
-!Backspace::CapsSendSequence("^a", "{Backspace}")
-Enter::CapsSendSequence("{End}", "{Enter}")
-
-; Independent clipboard slots.
-x::UseClipboard("cut", 1)
-c::UseClipboard("copy", 1)
-v::UseClipboard("paste", 1)
-+v::UseClipboard("plain", 1)
-!x::UseClipboard("cut", 2)
-!c::UseClipboard("copy", 2)
-!v::UseClipboard("paste", 2)
-!+v::UseClipboard("plain", 2)
-
-; Predictable window movement without routing through Capslox.
-+s::UseWindowAction(ObjBindMethod(WindowMover, "Snap", "left"))
-+f::UseWindowAction(ObjBindMethod(WindowMover, "Snap", "right"))
-+e::UseWindowAction(ObjBindMethod(WindowMover, "Maximize"))
-+d::UseWindowAction(ObjBindMethod(WindowMover, "RestoreOrMinimize"))
-+a::UseWindowAction(ObjBindMethod(WindowMover, "MoveToMonitor", "left"))
-+g::UseWindowAction(ObjBindMethod(WindowMover, "MoveToMonitor", "right"))
-
-; Window slots: Caps+number activates/minimizes, Caps+Alt+number binds.
-1::UseWindowSlot(1, false)
-!1::UseWindowSlot(1, true)
-2::UseWindowSlot(2, false)
-!2::UseWindowSlot(2, true)
-3::UseWindowSlot(3, false)
-!3::UseWindowSlot(3, true)
-4::UseWindowSlot(4, false)
-!4::UseWindowSlot(4, true)
-5::UseWindowSlot(5, false)
-!5::UseWindowSlot(5, true)
-6::UseWindowSlot(6, false)
-!6::UseWindowSlot(6, true)
-7::UseWindowSlot(7, false)
-!7::UseWindowSlot(7, true)
-8::UseWindowSlot(8, false)
-!8::UseWindowSlot(8, true)
-9::UseWindowSlot(9, false)
-!9::UseWindowSlot(9, true)
-0::UseWindowSlot(10, false)
-!0::UseWindowSlot(10, true)
-
-; Script controls.
-+SC033::OpenProjectFolder() ; Caps+Shift+comma
-+SC035::EditBindings() ; Caps+Shift+slash
-
-#HotIf
 
 MarkCapsLayerUsed() {
     global CapsLayerUsed
@@ -236,22 +126,6 @@ UseWindowAction(action) {
     action.Call()
 }
 
-EditBindings(*) {
-    MarkCapsLayerUsed()
-    if A_IsCompiled {
-        Toast.Show("可执行版快捷键已内置；请修改源码后重新构建", "info")
-        return
-    }
-
-    command := Chr(34) MyCapsloxConfig.EditorExecutable Chr(34)
-    if MyCapsloxConfig.EditorArguments != ""
-        command .= " " MyCapsloxConfig.EditorArguments
-    command .= " " Chr(34) A_ScriptFullPath Chr(34)
-    try Run(command)
-    catch Error as err
-        Toast.Show("打开编辑器失败：" err.Message, "error")
-}
-
 OpenProjectFolder(*) {
     MarkCapsLayerUsed()
     try Run("explorer.exe " Chr(34) A_ScriptDir Chr(34))
@@ -272,13 +146,13 @@ ExitMyCapslox(*) {
 
 SetupTray() {
     A_TrayMenu.Delete()
+    A_TrayMenu.Add("快捷键指南", ShowKeyBindings)
     if A_IsCompiled {
         A_TrayMenu.Add("打开程序目录", OpenProjectFolder)
         defaultItem := "打开程序目录"
     } else {
-        A_TrayMenu.Add("编辑快捷键", EditBindings)
         A_TrayMenu.Add("打开脚本目录", OpenProjectFolder)
-        defaultItem := "编辑快捷键"
+        defaultItem := "快捷键指南"
     }
     A_TrayMenu.Add()
     A_TrayMenu.Add("暂停 / 继续", ToggleMyCapslox)
